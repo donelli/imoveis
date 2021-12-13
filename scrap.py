@@ -2,6 +2,7 @@
 from typing import List
 import requests
 from bs4 import BeautifulSoup
+from time import sleep
 
 websites = {
    'nova': 'https://cdn2.uso.com.br/sites/logos/47735.png',
@@ -264,11 +265,14 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
 
 if __name__ == "__main__":
    
-   # loadFromNovaImoveis(immobiles)
-
-   # loadFromNaturezaimoveis(immobiles)
+   loadFromNovaImoveis(immobiles)
+   sleep(2)
+   
+   loadFromNaturezaimoveis(immobiles)
+   sleep(2)
 
    loadFromNovaPetropolis(immobiles)
+   sleep(2)
 
    # TODO:  Usar selenium
    # https://www.alpinaimoveis.com.br/busca_imoveis.php?modalidade=2&tipo=1&cidade=1&bairro=&codigo=
