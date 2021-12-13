@@ -191,8 +191,6 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
          <div class="col-md-4 col-xl-3">
             <div class="card m-1">
                
-               <!-- <img class="card-img-top" src="..." alt="Card image cap"> -->
-               
                <div class="card-img-top">
                
                   <div id=\"""" + idItem + """\" class="carousel slide" data-ride="carousel" data-interval="false">
@@ -234,7 +232,7 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
       <meta charset="UTF-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Imovéis para alugar em Nova Petrópolis</title>
+      <title>Imóveis para alugar em Nova Petrópolis</title>
       
       <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
       <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
