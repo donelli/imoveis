@@ -5,7 +5,8 @@ from bs4 import BeautifulSoup
 
 websites = {
    'nova': 'https://cdn2.uso.com.br/sites/logos/47735.png',
-   'natureza': ''
+   'natureza': 'https://img.buscaimoveis.com/fotos/logo/png/210.png',
+   'novapetropolis': 'https://imgs.kenlo.io/VWRCUkQ2Tnp3d1BJRDBJVe1s0xgxSbBGOsBT9+RO1zjks-ynciLnlXpdKzsuCVZKPvMZhGt-GI0v+QFtypVh7xY3icsFUfjn5XDehcKoyvKw6mCx17Tqnov84vjeYOqZkIsy2KSjTwL9vvU4H40sYkt1auMjGxCzAd3ebCQK-WnJrEHKRfECCXMfjV5qhQ==.png'
 }
 
 class Immobile:
@@ -19,6 +20,41 @@ class Immobile:
    website      = ""
 
 immobiles = []
+
+def loadFromNovaPetropolis(immobiles):
+   
+   headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+   data = requests.get("https://www.imobiliarianovapetropolis.com.br/imoveis/para-alugar/apartamento/nova-petropolis", headers=headers)
+   
+   soup = BeautifulSoup(data.text, 'html.parser')
+
+   results = soup.find('div', class_="listing-results")
+   
+   for result in results:
+      
+      images  = result.find_all("div", class_="card-img-top")
+      prices  = ""
+      
+      left = result.find("div", class_='info-left')
+      if left:
+         prices = list(left.children)[-1].text
+      
+      right = result.find("div", class_='info-right')
+      if right:
+         prices += " | " + right.getText(separator=" ")
+      
+      immobile = Immobile()
+      immobile.title = result.find("h3", class_="card-text").text
+      immobile.localization = result.find("h2", class_="card-title").text
+      immobile.description = result.find("p", class_="description").text
+      immobile.details = " | ".join([ ( val.p.span.text + " " + val.p.find(text=True, recursive=False) ) for val in result.find("div", class_="values") ])
+      immobile.prices = prices
+      immobile.images = [ img['data-src'] for img in images ]
+      immobile.link = "https://www.imobiliarianovapetropolis.com.br" + result.find('a')['href']
+      immobile.website = "novapetropolis"
+
+      immobiles.append(immobile)
+   
 
 def loadFromNaturezaimoveis(immobiles):
    
@@ -179,7 +215,7 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
                <p class="card-text">
                   """ + ((immobile.description + "<hr>") if immobile.description else "") + """
                   """ + ((immobile.details + "<hr>") if immobile.details else "") + """
-                  """ + ((immobile.localization + "<hr>") if immobile.localization else "") + """
+                  """ + (("<b>Localização:</b> " + immobile.localization + "<hr>") if immobile.localization else "") + """
                   """ + immobile.prices + """
                </p>
                <a href=\"""" + immobile.link + """\" target="_blank" class="btn btn-primary">Abrir no site</a>
@@ -234,15 +270,14 @@ if __name__ == "__main__":
 
    # loadFromNaturezaimoveis(immobiles)
 
+   loadFromNovaPetropolis(immobiles)
+
    # TODO:  Usar selenium
    # https://www.alpinaimoveis.com.br/busca_imoveis.php?modalidade=2&tipo=1&cidade=1&bairro=&codigo=
    
    # TODO: Usar selenium
    # https://www.dedicareimoveis.com.br/?pesquisar/1
 
-   # TODO testar
-   # https://www.imobiliarianovapetropolis.com.br/imoveis/para-alugar/apartamento/nova-petropolis
-   
    if len(immobiles) > 1:
       generateHTML(immobiles, "index.html")
 
