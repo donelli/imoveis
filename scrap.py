@@ -1,8 +1,10 @@
 
+import os
 from typing import List
 import requests
 from bs4 import BeautifulSoup
-from time import sleep
+from time import sleep, time, localtime, strftime
+import json
 
 websites = {
    'nova': 'https://cdn2.uso.com.br/sites/logos/47735.png',
@@ -10,19 +12,40 @@ websites = {
    'novapetropolis': 'https://imgs.kenlo.io/VWRCUkQ2Tnp3d1BJRDBJVe1s0xgxSbBGOsBT9+RO1zjks-ynciLnlXpdKzsuCVZKPvMZhGt-GI0v+QFtypVh7xY3icsFUfjn5XDehcKoyvKw6mCx17Tqnov84vjeYOqZkIsy2KSjTwL9vvU4H40sYkt1auMjGxCzAd3ebCQK-WnJrEHKRfECCXMfjV5qhQ==.png'
 }
 
+IMMOBILE_FILE = "./immobiles.json"
+
+def jsonToImmobile(obj: dict):
+   im = Immobile()
+   im.images        = obj['images']
+   im.title         = obj['title']
+   im.localization  = obj['localization']
+   im.description   = obj['description'] if 'description' in obj else ""
+   im.link          = obj['link']
+   im.details       = obj['details']
+   im.prices        = obj['prices']
+   im.website       = obj['website']
+   im.inclusionDate = obj['inclusionDate']
+   return im
+
 class Immobile:
-   images       = []
-   title        = ""
-   localization = ""
-   description  = ""
-   link         = ""
-   details      = ""
-   prices       = ""
-   website      = ""
+   images        = []
+   title         = ""
+   localization  = ""
+   description   = ""
+   link          = ""
+   details       = ""
+   prices        = ""
+   website       = ""
+   inclusionDate = 0
+   
+   def toJSON(self):
+      return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=3)
+
+Immobile.fromJSON = staticmethod(jsonToImmobile)
 
 immobiles = []
 
-def loadFromNovaPetropolis(immobiles):
+def loadFromNovaPetropolis(immobiles: List[Immobile]):
    
    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
    data = requests.get("https://www.imobiliarianovapetropolis.com.br/imoveis/para-alugar/apartamento/nova-petropolis", headers=headers)
@@ -53,11 +76,11 @@ def loadFromNovaPetropolis(immobiles):
       immobile.images = [ img['data-src'] for img in images ]
       immobile.link = "https://www.imobiliarianovapetropolis.com.br" + result.find('a')['href']
       immobile.website = "novapetropolis"
-
+      
       immobiles.append(immobile)
    
 
-def loadFromNaturezaimoveis(immobiles):
+def loadFromNaturezaimoveis(immobiles: List[Immobile]):
    
    data = requests.get("https://www.naturezaimoveis.com.br/busca?estado=2&cidade=18&bairro=&valor-min=&valor-max=&operacao=locacao&tipo-imovel=6&dormitorios=&area-min=&area-max=&page=1")
    
@@ -93,7 +116,7 @@ def loadFromNaturezaimoveis(immobiles):
       immobiles.append(immobile)
    
 
-def loadFromNovaImoveis(immobiles):
+def loadFromNovaImoveis(immobiles: List[Immobile]):
    
    data = requests.get("https://www.imoveisnova.com.br/alugar/rs/nova-petropolis/apartamento/ordem-valor/resultado-decrescente/quantidade-48/")
    
@@ -170,9 +193,13 @@ def loadFromNovaImoveis(immobiles):
 
 def generateHTML(immobiles: List[Immobile], fileName: str):
    
+   immobiles.sort(key=lambda i: i.inclusionDate, reverse=True)
+   
    itensHTML = ""
 
    for immobile in immobiles:
+      
+      formatedDate = strftime('%d/%m/%Y %H:%M', localtime(immobile.inclusionDate))
       
       imagesHTML = ""
       
@@ -210,17 +237,20 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
                </div>
                
                <div class="card-body">
-               <h5 class="card-title">""" + immobile.title + """</h5>
-               <p class="card-text">
-                  """ + ((immobile.description + "<hr>") if immobile.description else "") + """
-                  """ + ((immobile.details + "<hr>") if immobile.details else "") + """
-                  """ + (("<b>Localização:</b> " + immobile.localization + "<hr>") if immobile.localization else "") + """
-                  """ + immobile.prices + """
-               </p>
-               <a href=\"""" + immobile.link + """\" target="_blank" class="btn btn-primary">Abrir no site</a>
-               <div style="float: right">
-                  <img style="height: 35px;" src=\"""" + websites[immobile.website] + """\">
-               </div>
+                  <h5 class="card-title">""" + immobile.title + """</h5>
+                  <p class="card-text">
+                     """ + ((immobile.description + "<hr>") if immobile.description else "") + """
+                     """ + ((immobile.details + "<hr>") if immobile.details else "") + """
+                     """ + (("<b>Localização:</b> " + immobile.localization + "<hr>") if immobile.localization else "") + """
+                     """ + immobile.prices + """
+                  </p>
+                  <a href=\"""" + immobile.link + """\" target="_blank" class="btn btn-primary">Abrir no site</a>
+                  <div style="float: right">
+                     <img style="height: 35px;" src=\"""" + websites[immobile.website] + """\">
+                  </div>
+                  <p class="mb-0">
+                     <small>Inclusão: """ + formatedDate + """</small>
+                  </p>
                </div>
             </div> 
          </div>
@@ -243,7 +273,7 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
    </head>
    <body>
       
-      <div class="container-fluid">
+      <div class="container-fluid mb-3">
          <div class="row">
             <div class="col py-3">
                <h1 class="h2">
@@ -263,7 +293,36 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
       f.write(htmlString)
 
 
+def loadImmobiles() -> List[Immobile]:
+   
+   if not os.path.isfile(IMMOBILE_FILE):
+      return []
+   
+   with open(IMMOBILE_FILE, "r") as f:
+      return [ Immobile.fromJSON(obj) for obj in json.loads("".join(f.readlines())) ]
+
+
+def saveImmobiles(immobiles: List[Immobile]):
+   
+   with open(IMMOBILE_FILE, "w") as f:
+      f.write("[\n" + ",".join([ imob.toJSON() for imob in immobiles ]) + "\n]")
+
+
+def processNewImmobiles(immobiles: List[Immobile], lastGenImobbiles: List[Immobile]):
+   
+   for currentImob in immobiles:
+      
+      lastGen = [i for i in lastGenImobbiles if i.link == currentImob.link]
+      
+      if len(lastGen) > 0:
+         currentImob.inclusionDate = lastGen[0].inclusionDate
+      else:
+         currentImob.inclusionDate = int(time())
+   
+
 if __name__ == "__main__":
+   
+   lastGenImobbiles = loadImmobiles()
    
    loadFromNovaImoveis(immobiles)
    sleep(2)
@@ -280,7 +339,9 @@ if __name__ == "__main__":
    # TODO: Usar selenium
    # https://www.dedicareimoveis.com.br/?pesquisar/1
 
+   processNewImmobiles(immobiles, lastGenImobbiles)
+
    if len(immobiles) > 1:
       generateHTML(immobiles, "index.html")
-
+      saveImmobiles(immobiles)
    
