@@ -6,6 +6,11 @@ from bs4 import BeautifulSoup
 from time import sleep, time, localtime, strftime
 import json
 
+from datetime import date, datetime
+from pytz import timezone
+
+saoPauloTimezone = timezone('America/Sao_Paulo')
+
 websites = {
    'nova': 'https://cdn2.uso.com.br/sites/logos/47735.png',
    'natureza': 'https://img.buscaimoveis.com/fotos/logo/png/210.png',
@@ -199,7 +204,9 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
 
    for immobile in immobiles:
       
-      formatedDate = strftime('%d/%m/%Y %H:%M', localtime(immobile.inclusionDate))
+      # formatedDate = strftime('%d/%m/%Y %H:%M', localtime(immobile.inclusionDate) - timedelta(hours=0, minutes=50))
+      
+      formatedDate = datetime.fromtimestamp(immobile.inclusionDate).strftime('%d/%m/%Y %H:%M')
       
       imagesHTML = ""
       
