@@ -286,6 +286,9 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
                <h1 class="h2">
                   Imóveis para alugar em Nova Petrópolis
                </h1>
+               <h4>
+                  Atualizado em """ + datetime.fromtimestamp(time()).strftime('%d/%m/%Y %H:%M') + """
+               </h4>
             </div>
          </div>
          <div class="row">
