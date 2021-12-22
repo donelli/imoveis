@@ -10,6 +10,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
+import re
 
 companyLogo = {
    'nova': 'https://cdn2.uso.com.br/sites/logos/47735.png',
@@ -273,26 +274,8 @@ def loadFromNovaImoveis(immobiles: List[Immobile]):
          if prices != "":
             prices += " | "
          prices += val.small.text + ' ' + val.h5.text
-      
-      detailDiv = item.find_all('div', class_='detalhe')
-      
-      if len(detailDiv) == 4:
-         
-         dorms = detailDiv[0].text
-         suites = detailDiv[1].text
-         parkingSpaces = detailDiv[2].text
-         tamanho = detailDiv[3].text + (" m²" if not "m²" in detailDiv[3].text else "")
-         
-         if len(dorms) == 1:
-            dorms = dorms + " dormitorios"
 
-         if len(suites) == 1:
-            suites = suites + " suites"
-
-         if len(parkingSpaces) == 1:
-            parkingSpaces = parkingSpaces + " vagas"
-         
-         details = dorms + " | " + suites + " | " + parkingSpaces + " | " + tamanho
+      details = re.sub(r"\s\|\s[^\w]", " ", item.find("div", class_="detalhes").get_text(separator=" | "))
       
       fotoramaDiv = item.find('div', class_="fotorama")
       
@@ -384,7 +367,7 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
          </div>
       """.strip()
 
-   companiesHTML = "".join( '<img src="' + logo + '" height="50" class="mx-1">' for _, logo in companyLogo )
+   companiesHTML = "".join( '<img src="' + companyLogo[i] + '" height="50" class="mx-1">' for i in companyLogo )
    
    htmlString = """
    <!DOCTYPE html>
@@ -445,6 +428,13 @@ def saveImmobiles(immobiles: List[Immobile]):
       f.write("[\n" + ",".join([ imob.toJSON() for imob in immobiles ]) + "\n]")
 
 
+def getMoreDetailsFromAlpina(immob: Immobile):
+   
+   res = requests.get(immob.link)
+   soup = BeautifulSoup(res.text, 'html.parser')
+
+   immob.description = soup.find("meta", property="og:description")['content']
+
 def processNewImmobiles(immobiles: List[Immobile], lastGenImobbiles: List[Immobile]):
    
    for currentImob in immobiles:
@@ -455,7 +445,11 @@ def processNewImmobiles(immobiles: List[Immobile], lastGenImobbiles: List[Immobi
          currentImob.inclusionDate = lastGen[0].inclusionDate
       else:
          currentImob.inclusionDate = int(time())
-   
+         
+         if currentImob.website == "alpina":
+            getMoreDetailsFromAlpina(currentImob)
+            sleep(2)
+         
 
 if __name__ == "__main__":
    
