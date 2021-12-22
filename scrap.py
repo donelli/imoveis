@@ -1,20 +1,22 @@
-
 import os
 from typing import List
 import requests
 from bs4 import BeautifulSoup
-from time import sleep, time, localtime, strftime
+from time import sleep, time
 import json
+from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.webdriver import WebDriver
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 
-from datetime import date, datetime
-from pytz import timezone
-
-saoPauloTimezone = timezone('America/Sao_Paulo')
-
-websites = {
+companyLogo = {
    'nova': 'https://cdn2.uso.com.br/sites/logos/47735.png',
    'natureza': 'https://img.buscaimoveis.com/fotos/logo/png/210.png',
-   'novapetropolis': 'https://imgs.kenlo.io/VWRCUkQ2Tnp3d1BJRDBJVe1s0xgxSbBGOsBT9+RO1zjks-ynciLnlXpdKzsuCVZKPvMZhGt-GI0v+QFtypVh7xY3icsFUfjn5XDehcKoyvKw6mCx17Tqnov84vjeYOqZkIsy2KSjTwL9vvU4H40sYkt1auMjGxCzAd3ebCQK-WnJrEHKRfECCXMfjV5qhQ==.png'
+   'novapetropolis': 'https://imgs.kenlo.io/VWRCUkQ2Tnp3d1BJRDBJVe1s0xgxSbBGOsBT9+RO1zjks-ynciLnlXpdKzsuCVZKPvMZhGt-GI0v+QFtypVh7xY3icsFUfjn5XDehcKoyvKw6mCx17Tqnov84vjeYOqZkIsy2KSjTwL9vvU4H40sYkt1auMjGxCzAd3ebCQK-WnJrEHKRfECCXMfjV5qhQ==.png',
+   'alpina': 'https://www.alpinaimoveis.com.br/images/logo.png',
+   'dedicare': 'https://www.dedicareimoveis.com.br/assets/img/logo.png'
 }
 
 IMMOBILE_FILE = "./immobiles.json"
@@ -50,6 +52,127 @@ Immobile.fromJSON = staticmethod(jsonToImmobile)
 
 immobiles = []
 
+def parsePageDedicareImoveis(driver: WebDriver):
+
+   immobiles = []
+   elems = driver.find_elements(By.CLASS_NAME, "lista-imoveis")
+
+   for elem in elems:
+      
+      imageDiv = elem.find_element(By.CLASS_NAME, "foto")
+      imgUrl = imageDiv.value_of_css_property("background-image").replace('url("', "").replace('")', "")
+      
+      id = imageDiv.get_attribute("onclick").split("'")[1]
+      
+      spans = elem.find_elements(By.TAG_NAME, "span")
+      
+      loc = spans[0].text
+      title = spans[1].text
+      price = spans[2].text
+      
+      divs = elem.find_elements(By.CLASS_NAME, "icones-destaques")
+      details = " | ".join([ div.text for div in divs ])
+
+      immobile = Immobile()
+      immobile.title = title
+      immobile.localization = loc
+      immobile.description = ""
+      immobile.details = details
+      immobile.prices = price
+      immobile.images = [ imgUrl ]
+      immobile.link = "https://www.dedicareimoveis.com.br/?detalhes/" + id
+      immobile.website = "dedicare"
+
+      immobiles.append(immobile)
+
+   return immobiles
+
+def loadFromDedicareImoveis(immobiles: List[Immobile], driver: WebDriver):
+   
+   driver.get("https://www.dedicareimoveis.com.br/")
+   sleep(5)
+
+   select = Select(driver.find_element(By.ID, 'destino'))
+   select.select_by_value('A')
+
+   select = Select(driver.find_element(By.ID, 'cidade'))
+   select.select_by_value('Nova Petrópolis')
+
+   select = Select(driver.find_element(By.ID, 'tipo'))
+   select.select_by_value('APARTAMENTO - ALUGUEL')
+   
+   driver.execute_script('document.querySelectorAll("#box-pesquisa button")[1].click()')
+   
+   sleep(5)
+   
+   pageImmobiles = parsePageDedicareImoveis(driver)
+   immobiles += pageImmobiles
+   urls = [ immobile.link for immobile in pageImmobiles ]
+   
+   page = 2
+   pagelessUrl = driver.current_url
+   
+   while True:
+      newUrl = pagelessUrl + "/" + str(page)
+      
+      print(" ---> " + newUrl)
+      
+      driver.get(newUrl)
+      
+      sleep(5)
+      
+      pageImmobiles = parsePageDedicareImoveis(driver)
+      
+      if len(pageImmobiles) == 0 or pageImmobiles[0].link in urls:
+         break
+      
+      immobiles += pageImmobiles
+      urls += [ immobile.link for immobile in pageImmobiles ]
+      
+      page += 1
+
+   
+def loadFromAlpinaImoveis(immobiles: List[Immobile], driver: WebDriver):
+   
+   driver.get("https://www.alpinaimoveis.com.br/busca_imoveis.php?modalidade=2&tipo=1&cidade=1&bairro=&codigo=")
+   sleep(2)
+
+   elems = driver.find_elements(By.CLASS_NAME, "caixa_foto_texto")
+   
+   for i in elems:
+      
+      owlItens = i.find_elements(By.CLASS_NAME, "owl-item")
+      imgs = []
+      
+      for item in owlItens:
+         if "cloned" in item.get_attribute("class"):
+            continue
+         imgs.append(item.find_element(By.CLASS_NAME, "foto-imovel").get_attribute("src"))
+      
+      title = i.find_element(By.CLASS_NAME, "titulo").text
+      location = i.find_element(By.CLASS_NAME, "cidade").text
+      price = i.find_element(By.CLASS_NAME, "valor").text
+
+      details = i.find_element(By.CLASS_NAME, "dados_imovel_small")
+      detailSpan = details.find_elements(By.TAG_NAME, "span")
+      
+      detailsStr = " | ".join([ span.text.replace("\n", " ") for span in detailSpan ])
+
+      link = i.find_element(By.CLASS_NAME, "conteudo").get_attribute("href")
+      
+      immobile = Immobile()
+      immobile.title = title
+      immobile.localization = location
+      immobile.description = ""
+      immobile.details = detailsStr
+      immobile.prices = price
+      immobile.images = imgs
+      immobile.link = link
+      immobile.website = "alpina"
+      
+      immobiles.append(immobile)
+   
+   
 def loadFromNovaPetropolis(immobiles: List[Immobile]):
    
    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
@@ -204,8 +327,6 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
 
    for immobile in immobiles:
       
-      # formatedDate = strftime('%d/%m/%Y %H:%M', localtime(immobile.inclusionDate) - timedelta(hours=0, minutes=50))
-      
       formatedDate = datetime.fromtimestamp(immobile.inclusionDate).strftime('%d/%m/%Y %H:%M')
       
       imagesHTML = ""
@@ -253,7 +374,7 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
                   </p>
                   <a href=\"""" + immobile.link + """\" target="_blank" class="btn btn-primary">Abrir no site</a>
                   <div style="float: right">
-                     <img style="height: 35px;" src=\"""" + websites[immobile.website] + """\">
+                     <img style="height: 35px;" src=\"""" + companyLogo[immobile.website] + """\">
                   </div>
                   <p class="mb-0">
                      <small>Inclusão: """ + formatedDate + """</small>
@@ -262,6 +383,8 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
             </div> 
          </div>
       """.strip()
+
+   companiesHTML = "".join( '<img src="' + logo + '" height="50" class="mx-1">' for _, logo in companyLogo )
    
    htmlString = """
    <!DOCTYPE html>
@@ -288,6 +411,10 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
                </h1>
                <div>
                   Atualizado em """ + datetime.fromtimestamp(time()).strftime('%d/%m/%Y %H:%M') + """
+               </div>
+               <div class="mt-2">Imobiliárias</div>
+               <div>
+               """ + companiesHTML + """
                </div>
             </div>
          </div>
@@ -333,6 +460,11 @@ def processNewImmobiles(immobiles: List[Immobile], lastGenImobbiles: List[Immobi
 if __name__ == "__main__":
    
    lastGenImobbiles = loadImmobiles()
+
+   options = webdriver.ChromeOptions()
+   options.add_argument("--headless")
+
+   driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=options)
    
    loadFromNovaImoveis(immobiles)
    sleep(2)
@@ -343,12 +475,12 @@ if __name__ == "__main__":
    loadFromNovaPetropolis(immobiles)
    sleep(2)
 
-   # TODO:  Usar selenium
-   # https://www.alpinaimoveis.com.br/busca_imoveis.php?modalidade=2&tipo=1&cidade=1&bairro=&codigo=
-   
-   # TODO: Usar selenium
-   # https://www.dedicareimoveis.com.br/?pesquisar/1
+   loadFromAlpinaImoveis(immobiles, driver)
+   sleep(2)
 
+   loadFromDedicareImoveis(immobiles, driver)
+   sleep(2)
+   
    processNewImmobiles(immobiles, lastGenImobbiles)
 
    if len(immobiles) > 1:
