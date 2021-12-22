@@ -367,7 +367,7 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
          </div>
       """.strip()
 
-   companiesHTML = "".join( '<img src="' + companyLogo[i] + '" height="50" class="mx-1">' for i in companyLogo )
+   companiesHTML = "".join( '<img src="' + companyLogo[i] + '" width="100" class="mx-2">' for i in companyLogo )
    
    htmlString = """
    <!DOCTYPE html>
