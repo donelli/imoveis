@@ -95,12 +95,15 @@ def loadFromDedicareImoveis(immobiles: List[Immobile], driver: WebDriver):
 
    select = Select(driver.find_element(By.ID, 'destino'))
    select.select_by_value('A')
+   sleep(1)
 
    select = Select(driver.find_element(By.ID, 'cidade'))
    select.select_by_value('Nova Petrópolis')
-
+   sleep(1)
+   
    select = Select(driver.find_element(By.ID, 'tipo'))
    select.select_by_value('APARTAMENTO - ALUGUEL')
+   sleep(1)
    
    driver.execute_script('document.querySelectorAll("#box-pesquisa button")[1].click()')
    
@@ -136,7 +139,7 @@ def loadFromDedicareImoveis(immobiles: List[Immobile], driver: WebDriver):
 def loadFromAlpinaImoveis(immobiles: List[Immobile], driver: WebDriver):
    
    driver.get("https://www.alpinaimoveis.com.br/busca_imoveis.php?modalidade=2&tipo=1&cidade=1&bairro=&codigo=")
-   sleep(2)
+   sleep(5)
 
    elems = driver.find_elements(By.CLASS_NAME, "caixa_foto_texto")
    
@@ -247,11 +250,11 @@ def loadFromNaturezaimoveis(immobiles: List[Immobile]):
 
 def loadFromNovaImoveis(immobiles: List[Immobile]):
    
-   data = requests.get("https://www.imoveisnova.com.br/alugar/rs/nova-petropolis/apartamento/ordem-valor/resultado-decrescente/quantidade-48/")
+   data = requests.get("https://www.imoveisnova.com.br/alugar/rs/nova-petropolis/apartamento/ordem-valor/resultado-decrescente/quantidade-80/")
    
    soup = BeautifulSoup(data.text, 'html.parser')
    
-   res = soup.find_all('div', class_='resultado')
+   res = soup.find("div", class_="todos_imoveis").find_all('div', class_='resultado')
 
    for item in res:
       
@@ -264,7 +267,7 @@ def loadFromNovaImoveis(immobiles: List[Immobile]):
       
       divDesc = item.find('div', class_='descricao')
       if divDesc:
-         description = divDesc.text
+         description = divDesc.text.strip()
       
       h4Local = item.find('h4', class_='localizacao')
       if h4Local:
@@ -287,7 +290,15 @@ def loadFromNovaImoveis(immobiles: List[Immobile]):
          if img:
             images.append(img['src'])
          
-      link = "https://www.imoveisnova.com.br" + item.find("a")['href']
+      link = "https://www.imoveisnova.com.br" + item.find("a")['href'].strip()
+
+      for immob in immobiles:
+         if immob.link == link:
+            if immob.description == "":
+               immobiles.remove(immob)
+               break
+            else:
+               continue
       
       immobile = Immobile()
       immobile.title = title
@@ -443,6 +454,10 @@ def processNewImmobiles(immobiles: List[Immobile], lastGenImobbiles: List[Immobi
       
       if len(lastGen) > 0:
          currentImob.inclusionDate = lastGen[0].inclusionDate
+         
+         if currentImob.description == "":
+            currentImob.description = lastGen[0].description
+         
       else:
          currentImob.inclusionDate = int(time())
          
@@ -457,27 +472,41 @@ if __name__ == "__main__":
 
    options = webdriver.ChromeOptions()
    options.add_argument("--headless")
+   options.add_argument("--window-size=1920,1080")
 
    driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=options)
    
+   print("Loading from 'Nova imoveis'...")
    loadFromNovaImoveis(immobiles)
    sleep(2)
    
+   print("Loading from 'Natureza imoveis'...")
    loadFromNaturezaimoveis(immobiles)
    sleep(2)
 
+   print("Loading from 'Nova Petrópolis imoveis'...")
    loadFromNovaPetropolis(immobiles)
    sleep(2)
 
+   print("Loading from 'Alpina imoveis'...")
    loadFromAlpinaImoveis(immobiles, driver)
    sleep(2)
 
+   print("Loading from 'Dedicare imoveis'...")
    loadFromDedicareImoveis(immobiles, driver)
    sleep(2)
+
+   # https://www.m3rimoveis.com.br/alugar/rs/nova-petropolis/apartamento/
+
+   # https://www.serranaimoveis.com.br/alugar/rs/nova-petropolis/apartamento/
+
+   print("Processing new immobiles...")
    
    processNewImmobiles(immobiles, lastGenImobbiles)
 
    if len(immobiles) > 1:
+      print("Saving immobiles and generating HTML...")
       generateHTML(immobiles, "index.html")
       saveImmobiles(immobiles)
    
+   driver.close()
