@@ -321,7 +321,13 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
 
    for immobile in immobiles:
       
-      formatedDate = datetime.fromtimestamp(immobile.inclusionDate).strftime('%d/%m/%Y %H:%M')
+      wasAddedToday = False
+      inclusion = datetime.fromtimestamp(immobile.inclusionDate)
+      
+      if inclusion.date() == datetime.today().date():
+         wasAddedToday = True
+
+      formatedDate = inclusion.strftime('%d/%m/%Y %H:%M')
       
       imagesHTML = ""
       
@@ -339,7 +345,7 @@ def generateHTML(immobiles: List[Immobile], fileName: str):
       
       itensHTML += """
          <div class="col-md-4 col-xl-3">
-            <div class="card m-1">
+            <div class="card m-1 """ + ("border-success" if wasAddedToday else "") + """ ">
                
                <div class="card-img-top">
                
