@@ -16,8 +16,8 @@ companyLogo = {
    'nova': 'https://cdn2.uso.com.br/sites/logos/47735.png',
    'natureza': 'https://img.buscaimoveis.com/fotos/logo/png/210.png',
    'novapetropolis': 'https://imgs.kenlo.io/VWRCUkQ2Tnp3d1BJRDBJVe1s0xgxSbBGOsBT9+RO1zjks-ynciLnlXpdKzsuCVZKPvMZhGt-GI0v+QFtypVh7xY3icsFUfjn5XDehcKoyvKw6mCx17Tqnov84vjeYOqZkIsy2KSjTwL9vvU4H40sYkt1auMjGxCzAd3ebCQK-WnJrEHKRfECCXMfjV5qhQ==.png',
-   'alpina': 'https://www.alpinaimoveis.com.br/images/logo.png',
-   'dedicare': 'https://www.dedicareimoveis.com.br/assets/img/logo.png'
+   'alpina': 'https://www.alpinaimoveis.com.br/images/logo.png'
+   # 'dedicare': 'https://www.dedicareimoveis.com.br/assets/img/logo.png'
 }
 
 IMMOBILE_FILE = "./immobiles.json"
@@ -492,9 +492,9 @@ if __name__ == "__main__":
    loadFromAlpinaImoveis(immobiles, driver)
    sleep(2)
 
-   print("Loading from 'Dedicare imoveis'...")
-   loadFromDedicareImoveis(immobiles, driver)
-   sleep(2)
+   # print("Loading from 'Dedicare imoveis'...")
+   # loadFromDedicareImoveis(immobiles, driver)
+   # sleep(2)
 
    # https://www.m3rimoveis.com.br/alugar/rs/nova-petropolis/apartamento/
 
