@@ -7,7 +7,8 @@ import json
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.webdriver import WebDriver
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 import re
@@ -475,12 +476,16 @@ def processNewImmobiles(immobiles: List[Immobile], lastGenImobbiles: List[Immobi
 if __name__ == "__main__":
    
    lastGenImobbiles = loadImmobiles()
+   
+   chrome_options = Options()
+   chrome_options.add_argument('--headless')
+   chrome_options.add_argument('--no-sandbox')
+   chrome_options.add_argument('--window-size=1920,1080')
+   chrome_options.add_argument('--disable-dev-shm-usage')
+   chrome_options.add_argument("--remote-debugging-port=9222") 
 
-   options = webdriver.ChromeOptions()
-   options.add_argument("--headless")
-   options.add_argument("--window-size=1920,1080")
-
-   driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=options)
+   service = Service("/usr/bin/google-chrome")
+   driver = webdriver.Chrome(service=service, options=chrome_options)
    
    print("Loading from 'Nova imoveis'...")
    loadFromNovaImoveis(immobiles)
