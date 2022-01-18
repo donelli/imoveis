@@ -484,7 +484,7 @@ if __name__ == "__main__":
    chrome_options.add_argument('--disable-dev-shm-usage')
    chrome_options.add_argument("--remote-debugging-port=9222") 
 
-   service = Service("/usr/bin/google-chrome")
+   service = Service(executable_path="/usr/bin/google-chrome")
    driver = webdriver.Chrome(service=service, options=chrome_options)
    
    print("Loading from 'Nova imoveis'...")
